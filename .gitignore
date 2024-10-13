@@ -1,0 +1,8 @@
+*.class
+*.log
+out
+build
+.idea
+.bloop
+temp
+hs_err_pid*
