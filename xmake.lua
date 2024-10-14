@@ -1,4 +1,4 @@
-local prj_dir = os.getenv("PWD")
+local prj_dir = os.getenv("PWD") or "."
 
 target("idea")
     set_kind("phony")
