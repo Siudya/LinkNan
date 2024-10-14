@@ -6,3 +6,5 @@ build
 .bloop
 temp
 hs_err_pid*
+.vscode
+.metals
