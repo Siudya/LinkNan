@@ -6,4 +6,6 @@ Notice: Make sure that you have installed `xmake`. If not, please refer to the [
 ```bash
 xmake run init
 xmake run comp
+xmake run cluster
+xmake run soc
 ```

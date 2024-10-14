@@ -1,5 +1,31 @@
 local prj_dir = os.curdir()
 
+local export_opts = " --target systemverilog --split-verilog --fpga-platform --enable-difftest --full-stacktrace"
+
+target("cluster")
+  set_kind("phony")
+  on_run(function (target)
+    local export_dir = "build/rtl/cluster"
+    local cmd_line = "mill -i nansha.runMain nansha.generator.CpuClusterGenerator -td " .. export_dir
+    os.execv(os.shell(), {cmd_line .. export_opts})
+    os.rm(export_dir .. "/firrtl_black_box_resource_files.f")
+    os.rm(export_dir .. "/filelist.f")
+    os.rm(export_dir .. "/extern_modules.sv")
+  end)
+target_end()
+
+target("soc")
+  set_kind("phony")
+  on_run(function (target)
+    local export_dir = "build/rtl/uncore"
+    local cmd_line = "mill -i nansha.runMain nansha.generator.SocGenerator -td " .. export_dir
+    os.execv(os.shell(), {cmd_line .. export_opts})
+    os.rm(export_dir .. "/firrtl_black_box_resource_files.f")
+    os.rm(export_dir .. "/filelist.f")
+    os.rm(export_dir .. "/extern_modules.sv")
+  end)
+target_end()
+
 target("idea")
   set_kind("phony")
 
@@ -12,12 +38,7 @@ target("init")
   set_kind("phony")
 
   on_run(function (target)
-    local exec = os.exec
-    exec("git submodule update --init")
-    os.cd(prj_dir .. "/dependencies/nanhu")
-    exec("git submodule update --init coupledL2 huancun")
-    os.cd(prj_dir .. "/dependencies/nanhu/coupledL2")
-    exec("git submodule update --init AXItoTL")
+    os.exec("git submodule update --init")
   end)
 target_end()
 
@@ -27,5 +48,13 @@ target("comp")
   on_run(function (target)
     os.execv(os.shell(), {"mill", "-i", "nansha.compile"})
     os.execv(os.shell(), {"mill", "-i", "nansha.test.compile"})
+  end)
+target_end()
+
+target("clean")
+  set_kind("phony")
+
+  on_run(function (target)
+    os.rmdir("build/*")
   end)
 target_end()
