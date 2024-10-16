@@ -9,10 +9,9 @@ import scala.annotation.tailrec
 object ArgParser {
   def apply(args: Array[String]): (Parameters, Array[String]) = {
     val configParam = args.filter(_ == "--config")
-
-    val configuration = if(configParam.isEmpty) {
+    val (configuration, stripCfgArgs) = if(configParam.isEmpty) {
       println("Config is not assigned, use Full Configuration!")
-      new FullConfig
+      (new FullConfig, args)
     } else {
       val pos = args.indexOf(configParam.head)
       val cfgStr = args(pos + 1)
@@ -21,13 +20,13 @@ object ArgParser {
         case "minimal" => new MinimalConfig
         case _ => new FullConfig
       }
-      res
+      val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)
+      (res, newArgs)
     }
 
     var firrtlOpts = Array[String]()
     var hasHelp: Boolean = false
 
-    @tailrec
     def parse(config: Parameters, args: List[String]): Parameters = {
       args match {
         case Nil => config
@@ -51,6 +50,11 @@ object ArgParser {
             case DebugOptionsKey => up(DebugOptionsKey).copy(AlwaysBasicDiff = true)
           }), tail)
 
+        case "--no-cores" :: tail =>
+          parse(config.alter((site, here, up) => {
+            case RemoveCoreKey => true
+          }), tail)
+
         case "--prefix" :: confString :: tail =>
           parse(config.alter((site, here, up) => {
             case PrefixKey => confString
@@ -62,7 +66,7 @@ object ArgParser {
       }
     }
 
-    val cfg = parse(configuration, args.toList)
+    val cfg = parse(configuration, stripCfgArgs.toList)
     if(hasHelp) firrtlOpts :+= "--help"
     (cfg, firrtlOpts)
   }

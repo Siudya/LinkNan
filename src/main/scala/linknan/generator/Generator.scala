@@ -1,8 +1,10 @@
 package linknan.generator
 
 import chisel3.stage.ChiselGeneratorAnnotation
-import circt.stage.FirtoolOption
+import circt.stage.{ChiselStage, FirtoolOption}
+import linknan.cluster.CpuCluster
 import linknan.soc.SoC
+import xijiang.{Node, NodeType}
 
 object Generator {
   val firtoolOps = Seq(
@@ -17,7 +19,6 @@ object Generator {
       " emittedLineLength=120, explicitBitcast, locationInfoStyle=plain," +
       " disallowExpressionInliningInPorts, disallowMuxInlining")
   )
-
 }
 
 object SocGenerator extends App {

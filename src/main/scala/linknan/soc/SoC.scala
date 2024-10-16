@@ -6,8 +6,8 @@ import chisel3.experimental.hierarchy.{Definition, Instance, Instantiate}
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
 import firrtl.annotations.NoTargetAnnotation
-import linknan.cluster.CpuCluster
-import linknan.generator.PrefixKey
+import linknan.cluster.{CoreWrapperIO, CpuCluster}
+import linknan.generator.{PrefixKey, RemoveCoreKey}
 import zhujiang.{ZJModule, ZJRawModule, Zhujiang}
 import org.chipsalliance.cde.config.{Field, Parameters}
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
@@ -88,6 +88,11 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
         cc.icn.misc.resetEnable(i) := true.B
       } else {
         cc.icn.misc.resetEnable(i) := false.B
+      }
+      if(p(RemoveCoreKey)) {
+        val port = IO(chiselTypeOf(cc.core.get(i)))
+        cc.core.get(i) <> port
+        port.suggestName(s"core_$cid")
       }
     }
   }

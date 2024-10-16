@@ -1,7 +1,6 @@
 package linknan.generator
 
 import SimpleL2.Configs.{L2Param, L2ParamKey}
-import SimpleL2.chi.CHIBundleParameters
 import org.chipsalliance.cde.config.{Config, _}
 import xiangshan.cache.DCacheParameters
 import xiangshan.{XSCoreParameters, XSCoreParamsKey}
@@ -10,15 +9,14 @@ import xs.utils.perf.{DebugOptions, DebugOptionsKey}
 import zhujiang.{ZJParameters, ZJParametersKey}
 
 case object PrefixKey extends Field[String]
+case object RemoveCoreKey extends Field[Boolean]
 
-class BaseConfig extends Config((site, here, up) => {
+class FullNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
   case PrefixKey => ""
-})
-
-class FullNocConfig extends Config((site, here, up) => {
+  case RemoveCoreKey => false
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
@@ -40,6 +38,11 @@ class FullNocConfig extends Config((site, here, up) => {
 })
 
 class ReducedNocConfig extends Config((site, here, up) => {
+  case DebugOptionsKey => DebugOptions()
+  case XSCoreParamsKey => XSCoreParameters()
+  case L2ParamKey => L2Param(useDiplomacy = true)
+  case PrefixKey => ""
+  case RemoveCoreKey => false
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
@@ -56,6 +59,11 @@ class ReducedNocConfig extends Config((site, here, up) => {
 })
 
 class MinimalNocConfig extends Config((site, here, up) => {
+  case DebugOptionsKey => DebugOptions()
+  case XSCoreParamsKey => XSCoreParameters()
+  case L2ParamKey => L2Param(useDiplomacy = true)
+  case PrefixKey => ""
+  case RemoveCoreKey => false
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.CC, cpuNum = 1, splitFlit = true, outstanding = 8, attr = "nanhu"),
@@ -69,12 +77,23 @@ class MinimalNocConfig extends Config((site, here, up) => {
   )
 })
 
+class LLCConfig(sizeInMiB:Int = 16, ways:Int = 16, sfWays:Int = 16) extends Config((site, here, up) => {
+  case ZJParametersKey => up(ZJParametersKey).copy(
+      cacheSizeInMiB = sizeInMiB,
+      cacheWays = ways,
+      snoopFilterWays = sfWays
+  )
+})
+
 class L2Config(sizeInKiB:Int = 1024, ways:Int = 8, slices:Int = 4) extends Config((site, here, up) => {
   case L2ParamKey => up(L2ParamKey).copy(
     ways = ways,
     nrSlice = slices,
     sets = sizeInKiB * 1024 / ways / slices / up(L2ParamKey).blockBytes
   )
+  case ZJParametersKey => up(ZJParametersKey).copy(
+      clusterCacheSizeInKiB = sizeInKiB
+    )
   case XSCoreParamsKey => up(XSCoreParamsKey).copy(
     L2NBanks = slices
   )
@@ -97,13 +116,13 @@ class L1DConfig(sizeInKiB:Int = 64, ways:Int = 4) extends Config((site, here, up
 })
 
 class FullConfig extends Config(
-  new FullNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
+  new L1DConfig ++ new L2Config ++ new LLCConfig ++ new FullNocConfig
 )
 
 class ReducedConfig extends Config(
-  new ReducedNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
+  new L1DConfig ++ new L2Config(512, 8) ++ new LLCConfig(4, 8) ++ new ReducedNocConfig
 )
 
 class MinimalConfig extends Config(
-  new MinimalNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
+  new L1DConfig ++ new L2Config(256, 8) ++ new LLCConfig(2, 8) ++ new MinimalNocConfig
 )

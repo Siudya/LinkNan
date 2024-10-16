@@ -3,29 +3,37 @@ package linknan.cluster
 import SimpleL2.Configs.L2ParamKey
 import SimpleL2.chi.CHIBundleParameters
 import chisel3._
-import chisel3.experimental.hierarchy.{instantiable, public}
+import chisel3.experimental.hierarchy.{Definition, Instance, instantiable, public}
 import darecreek.exu.vfu.{VFuParameters, VFuParamsKey}
 import freechips.rocketchip.diplomacy.{LazyModule, MonitorsEnabled}
+import linknan.generator.RemoveCoreKey
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.XSCoreParamsKey
-import xijiang.{Node, NodeType}
+import xijiang.Node
 import xs.utils.tl.{TLUserKey, TLUserParams}
 import xs.utils.{ClockManagerWrapper, ResetGen}
-import zhujiang.ZJModule
-import zhujiang.device.cluster.ClusterInterconnectComplex
+import zhujiang.ZJRawModule
 import zhujiang.device.cluster.interconnect.ClusterDeviceBundle
 
-class CpuClusterInner(node:Node)(implicit p:Parameters) extends ZJModule {
+@instantiable
+class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
+  private val removeCore = p(RemoveCoreKey)
   private val dcacheParams = p(XSCoreParamsKey).dcacheParametersOpt.get
   private val l2Params = p(L2ParamKey)
 
-  val io = IO(new Bundle {
-    val icn = new ClusterDeviceBundle(node)
-    val pllCfg = Output(Vec(8, UInt(32.W)))
-    val pllLock = Input(Bool())
-  })
+  private val coreGen = LazyModule(new CoreWrapper()(p.alterPartial({
+    case MonitorsEnabled => false
+    case TLUserKey => TLUserParams(aliasBits = dcacheParams.aliasBitsOpt.getOrElse(0))
+    case VFuParamsKey => VFuParameters()
+  })))
+  private val coreDef = if(!removeCore) Some(Definition(coreGen.module)) else None
+  private val coreSeq = if(!removeCore) Some(Seq.fill(node.cpuNum)(Instance(coreDef.get))) else None
+  coreSeq.foreach(_.zipWithIndex.foreach({case(c, i) => c.suggestName(s"core_$i")}))
+  private val cioParams = coreGen.cioNode.edges.in.head.bundle
+  private val cl2Params = coreGen.l2Node.edges.in.head.bundle
 
-  private val ccn = LazyModule(new CpuSubsystem(node.copy(nodeType = NodeType.RF))(p.alterPartial({
+  private val csu = LazyModule(new ClusterSharedUnit(cioParams, cl2Params, node)(p.alterPartial({
+    case MonitorsEnabled => false
     case TLUserKey => TLUserParams(aliasBits = dcacheParams.aliasBitsOpt.getOrElse(0))
     case L2ParamKey => l2Params.copy(
       nrClients = node.cpuNum,
@@ -34,34 +42,27 @@ class CpuClusterInner(node:Node)(implicit p:Parameters) extends ZJModule {
         addressBits = raw
       ))
     )
-    case VFuParamsKey => VFuParameters()
-    case MonitorsEnabled => false
   })))
-  private val cc = Module(ccn.module)
-  private val hub = Module(new ClusterInterconnectComplex(node, cc.io.cio.params))
+  private val _csu = Module(csu.module)
 
-  hub.io.l2cache <> cc.io.l2cache
-  hub.io.cio <> cc.io.cio
-  hub.io.pllLock := io.pllLock
-  io.icn <> hub.io.icn
-  io.pllCfg := hub.io.pllCfg
-
-  cc.io.cpu <> hub.io.cpu
-  cc.io.clock := clock
-  cc.io.reset := reset
-  cc.dft := hub.io.dft
-}
-
-@instantiable
-class CpuCluster(node:Node)(implicit p:Parameters) extends RawModule {
   @public val icn = IO(new ClusterDeviceBundle(node))
+  @public val core = if(removeCore) Some(IO(Vec(node.cpuNum, Flipped(new CoreWrapperIO(cioParams, cl2Params))))) else None
 
   private val pll = Module(new ClockManagerWrapper)
-  private val resetGen = withClockAndReset(pll.io.cpu_clock, icn.async.resetRx) { Module(new ResetGen) }
-  private val cluster = withClockAndReset(pll.io.cpu_clock, resetGen.o_reset) { Module(new CpuClusterInner(node)) }
-  icn <> cluster.io.icn
-  resetGen.dft := icn.dft.reset
-  pll.io.cfg := cluster.io.pllCfg
-  cluster.io.pllLock := pll.io.lock
+  private val resetSync = withClockAndReset(pll.io.cpu_clock, icn.async.resetRx) { ResetGen(dft = Some(icn.dft.reset)) }
+
+  icn <> _csu.io.icn
+
+  _csu.io.pllLock := pll.io.lock
+  pll.io.cfg := _csu.io.pllCfg
   pll.io.in_clock := icn.osc_clock
+
+  _csu.io.clock := pll.io.cpu_clock
+  _csu.io.reset := resetSync
+
+  if(removeCore) {
+    for(i <- 0 until node.cpuNum) _csu.io.core(i) <> core.get(i)
+  } else {
+    for(i <- 0 until node.cpuNum) _csu.io.core(i) <> coreSeq.get(i).io
+  }
 }
