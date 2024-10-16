@@ -1,4 +1,4 @@
-package nansha.generator
+package linknan.generator
 
 import org.chipsalliance.cde.config.Parameters
 import xs.utils.perf.DebugOptionsKey

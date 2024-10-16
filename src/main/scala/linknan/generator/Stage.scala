@@ -1,4 +1,4 @@
-package nansha.generator
+package linknan.generator
 
 import firrtl.AnnotationSeq
 import firrtl.options.{Dependency, Phase, PhaseManager, Shell, Stage}
@@ -8,7 +8,7 @@ trait XiangShanCli { this: Shell =>
   parser.note("XiangShan Options")
 }
 
-class NanshaShell extends Shell("nansha") with CLI with XiangShanCli
+class NanshaShell extends Shell("linknan") with CLI with XiangShanCli
 class NanshaStage extends Stage {
   override def prerequisites = Seq.empty
   override def optionalPrerequisites = Seq.empty

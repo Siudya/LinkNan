@@ -1,4 +1,4 @@
-package nansha.generator
+package linknan.generator
 
 import firrtl.AnnotationSeq
 import firrtl.ir._

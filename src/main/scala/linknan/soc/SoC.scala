@@ -1,10 +1,10 @@
-package nansha.soc
+package linknan.soc
 
 import chisel3._
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
-import nansha.cluster.CpuClusterMirror
-import nansha.generator.ClusterPfxKey
+import linknan.cluster.CpuClusterMirror
+import linknan.generator.ClusterPfxKey
 import zhujiang.{ZJModule, ZJRawModule, Zhujiang}
 import org.chipsalliance.cde.config.{Field, Parameters}
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation

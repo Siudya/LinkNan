@@ -1,4 +1,4 @@
-package nansha.generator
+package linknan.generator
 
 import SimpleL2.Configs.{L2Param, L2ParamKey}
 import SimpleL2.chi.CHIBundleParameters

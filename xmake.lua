@@ -6,7 +6,7 @@ target("cluster")
   set_kind("phony")
   on_run(function (target)
     local export_dir = "build/rtl/cluster"
-    local cmd_line = "mill -i nansha.runMain nansha.generator.CpuClusterGenerator -td " .. export_dir
+    local cmd_line = "mill -i linknan.runMain linknan.generator.CpuClusterGenerator -td " .. export_dir
     os.execv(os.shell(), {cmd_line .. export_opts})
     os.rm(export_dir .. "/firrtl_black_box_resource_files.f")
     os.rm(export_dir .. "/filelist.f")
@@ -18,7 +18,7 @@ target("soc")
   set_kind("phony")
   on_run(function (target)
     local export_dir = "build/rtl/uncore"
-    local cmd_line = "mill -i nansha.runMain nansha.generator.SocGenerator -td " .. export_dir
+    local cmd_line = "mill -i linknan.runMain linknan.generator.SocGenerator -td " .. export_dir
     os.execv(os.shell(), {cmd_line .. export_opts})
     os.rm(export_dir .. "/firrtl_black_box_resource_files.f")
     os.rm(export_dir .. "/filelist.f")
@@ -46,8 +46,8 @@ target("comp")
   set_kind("phony")
 
   on_run(function (target)
-    os.execv(os.shell(), {"mill", "-i", "nansha.compile"})
-    os.execv(os.shell(), {"mill", "-i", "nansha.test.compile"})
+    os.execv(os.shell(), {"mill", "-i", "linknan.compile"})
+    os.execv(os.shell(), {"mill", "-i", "linknan.test.compile"})
   end)
 target_end()
 

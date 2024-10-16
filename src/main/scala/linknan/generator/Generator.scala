@@ -1,9 +1,9 @@
-package nansha.generator
+package linknan.generator
 
 import chisel3.stage.ChiselGeneratorAnnotation
 import circt.stage.{ChiselStage, FirtoolOption}
-import nansha.cluster.CpuCluster
-import nansha.soc.SoC
+import linknan.cluster.CpuCluster
+import linknan.soc.SoC
 import xijiang.{Node, NodeType}
 import zhujiang.ZJParametersKey
 

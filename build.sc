@@ -85,7 +85,7 @@ object nanhu extends SbtModule with CommonModule {
   override def moduleDeps = super.moduleDeps ++ Seq(rocketchip, xsutils, fudian, difftest)
 }
 
-object nansha extends SbtModule with CommonModule {
+object linknan extends SbtModule with CommonModule {
   override def millSourcePath = os.pwd
   override def moduleDeps = super.moduleDeps ++ Seq(rocketchip, xsutils, nhl2, zhujiang, nanhu)
 

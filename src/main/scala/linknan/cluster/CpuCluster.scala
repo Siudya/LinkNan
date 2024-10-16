@@ -1,17 +1,15 @@
-package nansha.cluster
+package linknan.cluster
 
-import SimpleL2.Configs.{L2Param, L2ParamKey}
+import SimpleL2.Configs.L2ParamKey
 import SimpleL2.chi.CHIBundleParameters
 import chisel3._
 import chisel3.experimental.{ChiselAnnotation, annotate}
-import chisel3.util._
 import darecreek.exu.vfu.{VFuParameters, VFuParamsKey}
 import freechips.rocketchip.diplomacy.{LazyModule, MonitorsEnabled}
-import freechips.rocketchip.tile.XLen
-import nansha.generator.ClusterPfxKey
-import org.chipsalliance.cde.config.{Field, Parameters}
+import linknan.generator.ClusterPfxKey
+import org.chipsalliance.cde.config.Parameters
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
-import xiangshan.{XSCoreParameters, XSCoreParamsKey}
+import xiangshan.XSCoreParamsKey
 import xijiang.{Node, NodeType}
 import xs.utils.tl.{TLUserKey, TLUserParams}
 import xs.utils.{ClockManagerWrapper, ResetGen}
