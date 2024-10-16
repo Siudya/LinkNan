@@ -8,7 +8,22 @@ import scala.annotation.tailrec
 
 object ArgParser {
   def apply(args: Array[String]): (Parameters, Array[String]) = {
-    val defaultConfig = new DefaultConfig
+    val configParam = args.filter(_ == "--config")
+
+    val configuration = if(configParam.isEmpty) {
+      println("Config is not assigned, use Full Configuration!")
+      new FullConfig
+    } else {
+      val pos = args.indexOf(configParam.head)
+      val cfgStr = args(pos + 1)
+      val res = cfgStr match {
+        case "reduced" => new ReducedConfig
+        case "minimal" => new MinimalConfig
+        case _ => new FullConfig
+      }
+      res
+    }
+
     var firrtlOpts = Array[String]()
     var hasHelp: Boolean = false
 
@@ -38,8 +53,7 @@ object ArgParser {
 
         case "--prefix" :: confString :: tail =>
           parse(config.alter((site, here, up) => {
-            case ZJParametersKey => up(ZJParametersKey).copy(modulePrefix = confString + up(ZJParametersKey).modulePrefix)
-            case ClusterPfxKey => confString + up(ClusterPfxKey)
+            case PrefixKey => confString
           }), tail)
 
         case option :: tail =>
@@ -48,7 +62,7 @@ object ArgParser {
       }
     }
 
-    val cfg = parse(defaultConfig, args.toList)
+    val cfg = parse(configuration, args.toList)
     if(hasHelp) firrtlOpts :+= "--help"
     (cfg, firrtlOpts)
   }

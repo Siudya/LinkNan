@@ -1,10 +1,13 @@
 package linknan.soc
 
 import chisel3._
+import chisel3.experimental.hierarchy.core.Instance.InstanceBaseModuleExtensions
+import chisel3.experimental.hierarchy.{Definition, Instance, Instantiate}
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
-import linknan.cluster.CpuClusterMirror
-import linknan.generator.ClusterPfxKey
+import firrtl.annotations.NoTargetAnnotation
+import linknan.cluster.CpuCluster
+import linknan.generator.PrefixKey
 import zhujiang.{ZJModule, ZJRawModule, Zhujiang}
 import org.chipsalliance.cde.config.{Field, Parameters}
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
@@ -18,9 +21,8 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
   override protected val implicitReset = Wire(AsyncReset())
   private val mod = this.toNamed
   annotate(new ChiselAnnotation {
-    def toFirrtl = NestedPrefixModulesAnnotation(mod, zjParams.modulePrefix, inclusive = true)
+    def toFirrtl = NestedPrefixModulesAnnotation(mod, p(PrefixKey), inclusive = true)
   })
-
   private val noc = Module(new Zhujiang)
   private val clusterNum = noc.io.cluster.length
   private val uncore = Module(new UncoreComplex(noc.io.soc.cfg.node, noc.io.soc.dma.node))
@@ -63,27 +65,29 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
   uncore.io.debug.reset := DontCare
   io.ndreset := uncore.io.debug.ndreset
 
+  private val nanhuNode = noc.io.cluster.groupBy(_.node.attr)("nanhu").head.node
+  private val nanhuClusterDef = Definition(new CpuCluster(nanhuNode))
+
   for((icn, i) <- noc.io.cluster.zipWithIndex) {
     val clusterId = icn.node.clusterId
-    val cc = Module(new CpuClusterMirror(icn.node))
-    cc.suggestName(s"cluster_$i")
-    cc.io.icn.async <> icn
-    cc.io.icn.osc_clock := io.cluster_clocks(i)
-    cc.io.icn.dft := dft
+    val cc = Instance(nanhuClusterDef)
+    cc.icn.async <> icn
+    cc.icn.osc_clock := io.cluster_clocks(i)
+    cc.icn.dft := dft
     for(i <- 0 until icn.node.cpuNum) {
       val cid = clusterId + i
-      cc.io.icn.misc.msip(i) := uncore.io.cpu.msip(cid)
-      cc.io.icn.misc.mtip(i) := uncore.io.cpu.mtip(cid)
-      cc.io.icn.misc.meip(i) := uncore.io.cpu.meip(cid)
-      cc.io.icn.misc.seip(i) := uncore.io.cpu.seip(cid)
-      cc.io.icn.misc.dbip(i) := uncore.io.cpu.dbip(cid)
-      cc.io.icn.misc.mhartid(i) := Cat(io.chip, cid.U((clusterIdBits - nodeAidBits).W))
-      uncore.io.resetCtrl.hartIsInReset(cid) := cc.io.icn.misc.resetState(i)
-      cc.io.icn.misc.resetVector(i) := io.default_reset_vector
+      cc.icn.misc.msip(i) := uncore.io.cpu.msip(cid)
+      cc.icn.misc.mtip(i) := uncore.io.cpu.mtip(cid)
+      cc.icn.misc.meip(i) := uncore.io.cpu.meip(cid)
+      cc.icn.misc.seip(i) := uncore.io.cpu.seip(cid)
+      cc.icn.misc.dbip(i) := uncore.io.cpu.dbip(cid)
+      cc.icn.misc.mhartid(i) := Cat(io.chip, cid.U((clusterIdBits - nodeAidBits).W))
+      uncore.io.resetCtrl.hartIsInReset(cid) := cc.icn.misc.resetState(i)
+      cc.icn.misc.resetVector(i) := io.default_reset_vector
       if(cid == 0) {
-        cc.io.icn.misc.resetEnable(i) := true.B
+        cc.icn.misc.resetEnable(i) := true.B
       } else {
-        cc.io.icn.misc.resetEnable(i) := false.B
+        cc.icn.misc.resetEnable(i) := false.B
       }
     }
   }

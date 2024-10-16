@@ -9,32 +9,64 @@ import xijiang.{NodeParam, NodeType}
 import xs.utils.perf.{DebugOptions, DebugOptionsKey}
 import zhujiang.{ZJParameters, ZJParametersKey}
 
-case object ClusterPfxKey extends Field[String]
+case object PrefixKey extends Field[String]
 
 class BaseConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
+  case PrefixKey => ""
+})
+
+class FullNocConfig extends Config((site, here, up) => {
   case ZJParametersKey => ZJParameters(
-    modulePrefix = "uncore_",
     localNodeParams = Seq(
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
       NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
       NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
       NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
       NodeParam(nodeType = NodeType.HF, bankId = 1, splitFlit = true),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
     )
   )
-  case ClusterPfxKey => "nanhu_cluster_"
+})
+
+class ReducedNocConfig extends Config((site, here, up) => {
+  case ZJParametersKey => ZJParameters(
+    localNodeParams = Seq(
+      NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
+      NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
+      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
+      NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
+      NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
+      NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
+    )
+  )
+})
+
+class MinimalNocConfig extends Config((site, here, up) => {
+  case ZJParametersKey => ZJParameters(
+    localNodeParams = Seq(
+      NodeParam(nodeType = NodeType.CC, cpuNum = 1, splitFlit = true, outstanding = 8, attr = "nanhu"),
+      NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
+      NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
+      NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
+      NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
+    )
+  )
 })
 
 class L2Config(sizeInKiB:Int = 1024, ways:Int = 8, slices:Int = 4) extends Config((site, here, up) => {
@@ -64,6 +96,14 @@ class L1DConfig(sizeInKiB:Int = 64, ways:Int = 4) extends Config((site, here, up
   )
 })
 
-class DefaultConfig extends Config(
-  new L2Config ++ new L1DConfig ++ new BaseConfig
+class FullConfig extends Config(
+  new FullNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
+)
+
+class ReducedConfig extends Config(
+  new ReducedNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
+)
+
+class MinimalConfig extends Config(
+  new MinimalNocConfig ++ new L2Config ++ new L1DConfig ++ new BaseConfig
 )

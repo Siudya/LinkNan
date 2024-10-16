@@ -8,13 +8,13 @@ trait XiangShanCli { this: Shell =>
   parser.note("XiangShan Options")
 }
 
-class NanshaShell extends Shell("linknan") with CLI with XiangShanCli
-class NanshaStage extends Stage {
+class LinkNanShell extends Shell("linknan") with CLI with XiangShanCli
+class LinkNanStage extends Stage {
   override def prerequisites = Seq.empty
   override def optionalPrerequisites = Seq.empty
   override def optionalPrerequisiteOf = Seq.empty
   override def invalidates(a: Phase) = false
-  override val shell = new NanshaShell
+  override val shell = new LinkNanShell
   override def run(annotations: AnnotationSeq): AnnotationSeq = {
     val pm = new PhaseManager(
       targets = Seq(

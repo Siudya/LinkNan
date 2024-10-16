@@ -1,11 +1,8 @@
 package linknan.generator
 
 import chisel3.stage.ChiselGeneratorAnnotation
-import circt.stage.{ChiselStage, FirtoolOption}
-import linknan.cluster.CpuCluster
+import circt.stage.FirtoolOption
 import linknan.soc.SoC
-import xijiang.{Node, NodeType}
-import zhujiang.ZJParametersKey
 
 object Generator {
   val firtoolOps = Seq(
@@ -23,20 +20,11 @@ object Generator {
 
 }
 
-object CpuClusterGenerator extends App {
-  val (config, firrtlOpts) = ArgParser(args)
-  xs.utils.GlobalData.prefix = config(ClusterPfxKey)
-  difftest.GlobalData.prefix = config(ClusterPfxKey)
-  val node = Node(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true)
-  (new NanshaStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
-    ChiselGeneratorAnnotation(() => new CpuCluster(node)(config))
-  ))
-}
-
 object SocGenerator extends App {
   val (config, firrtlOpts) = ArgParser(args)
-  xs.utils.GlobalData.prefix = config(ZJParametersKey).modulePrefix
-  (new ChiselStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
+  xs.utils.GlobalData.prefix = config(PrefixKey)
+  difftest.GlobalData.prefix = config(PrefixKey)
+  (new LinkNanStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
     ChiselGeneratorAnnotation(() => new SoC()(config))
   ))
 }

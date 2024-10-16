@@ -3,12 +3,10 @@ package linknan.cluster
 import SimpleL2.Configs.L2ParamKey
 import SimpleL2.chi.CHIBundleParameters
 import chisel3._
-import chisel3.experimental.{ChiselAnnotation, annotate}
+import chisel3.experimental.hierarchy.{instantiable, public}
 import darecreek.exu.vfu.{VFuParameters, VFuParamsKey}
 import freechips.rocketchip.diplomacy.{LazyModule, MonitorsEnabled}
-import linknan.generator.ClusterPfxKey
 import org.chipsalliance.cde.config.Parameters
-import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
 import xiangshan.XSCoreParamsKey
 import xijiang.{Node, NodeType}
 import xs.utils.tl.{TLUserKey, TLUserParams}
@@ -54,14 +52,9 @@ class CpuClusterInner(node:Node)(implicit p:Parameters) extends ZJModule {
   cc.dft := hub.io.dft
 }
 
+@instantiable
 class CpuCluster(node:Node)(implicit p:Parameters) extends RawModule {
-
-  private val mod = this.toNamed
-  annotate(new ChiselAnnotation {
-    def toFirrtl = NestedPrefixModulesAnnotation(mod, p(ClusterPfxKey), inclusive = true)
-  })
-
-  val icn = IO(new ClusterDeviceBundle(node))
+  @public val icn = IO(new ClusterDeviceBundle(node))
 
   private val pll = Module(new ClockManagerWrapper)
   private val resetGen = withClockAndReset(pll.io.cpu_clock, icn.async.resetRx) { Module(new ResetGen) }
@@ -71,11 +64,4 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends RawModule {
   pll.io.cfg := cluster.io.pllCfg
   cluster.io.pllLock := pll.io.lock
   pll.io.in_clock := icn.osc_clock
-}
-
-class CpuClusterMirror(node:Node)(implicit p:Parameters) extends BlackBox {
-  override val desiredName = p(ClusterPfxKey) + "CpuCluster"
-  val io = IO(new Bundle{
-    val icn = new ClusterDeviceBundle(node)
-  })
 }
