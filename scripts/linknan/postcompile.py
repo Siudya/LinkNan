@@ -7,7 +7,7 @@ import argparse
 this_dir = os.path.dirname(os.path.abspath(__file__))
 cmd = "sed -i -E -f {} {}"
 assertion_pattern = r"if\s* \(\s*`ASSERT_VERBOSE_COND_\s*\)\s*\$error\(\"Assertion failed([\x00-\x7f]*?)if\s*\(\s*`STOP_COND_\)"
-replace_pattern = r'$error("Assertion failed: %m @ %t ", $time); $error("\1if (`STOP_COND_)'
+replace_pattern = '$fwrite(32\'h80000002, "Assertion failed: %m @ %t ", $time); $fwrite(32\'h80000002,"\\1if (`STOP_COND_)'
 
 class RtlFileWorker:
     vcs_style:bool = True
