@@ -66,9 +66,10 @@ class MinimalNocConfig extends Config((site, here, up) => {
   case RemoveCoreKey => false
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
-      NodeParam(nodeType = NodeType.CC, cpuNum = 1, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 1, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
       NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),

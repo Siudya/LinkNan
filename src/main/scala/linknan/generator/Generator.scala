@@ -2,9 +2,8 @@ package linknan.generator
 
 import chisel3.stage.ChiselGeneratorAnnotation
 import circt.stage.{ChiselStage, FirtoolOption}
-import linknan.cluster.CpuCluster
-import linknan.soc.SoC
-import xijiang.{Node, NodeType}
+import linknan.soc.LNTop
+import xs.utils.FileRegisters
 
 object Generator {
   val firtoolOps = Seq(
@@ -16,8 +15,8 @@ object Generator {
     FirtoolOption("--add-vivado-ram-address-conflict-synthesis-bug-workaround"),
     FirtoolOption("--lowering-options=noAlwaysComb," +
       " disallowPortDeclSharing, disallowLocalVariables," +
-      " emittedLineLength=120, explicitBitcast, locationInfoStyle=plain," +
-      " disallowExpressionInliningInPorts, disallowMuxInlining")
+      " emittedLineLength=120, explicitBitcast," +
+      " locationInfoStyle=plain, disallowMuxInlining")
   )
 }
 
@@ -26,6 +25,7 @@ object SocGenerator extends App {
   xs.utils.GlobalData.prefix = config(PrefixKey)
   difftest.GlobalData.prefix = config(PrefixKey)
   (new LinkNanStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
-    ChiselGeneratorAnnotation(() => new SoC()(config))
+    ChiselGeneratorAnnotation(() => new LNTop()(config))
   ))
+  FileRegisters.write(filePrefix = config(PrefixKey) + "LNTop.")
 }

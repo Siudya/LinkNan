@@ -1,21 +1,19 @@
 package linknan.soc
 
 import chisel3._
-import chisel3.experimental.hierarchy.core.Instance.InstanceBaseModuleExtensions
-import chisel3.experimental.hierarchy.{Definition, Instance, Instantiate}
+import chisel3.experimental.hierarchy.{Definition, Instance}
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
-import firrtl.annotations.NoTargetAnnotation
-import linknan.cluster.{CoreWrapperIO, CpuCluster}
+import linknan.cluster.{CoreBlockTestIO, CpuCluster}
 import linknan.generator.{PrefixKey, RemoveCoreKey}
-import zhujiang.{ZJModule, ZJRawModule, Zhujiang}
-import org.chipsalliance.cde.config.{Field, Parameters}
+import zhujiang.{ZJRawModule, Zhujiang}
+import org.chipsalliance.cde.config.Parameters
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
 import zhujiang.axi.AxiBundle
 import zhujiang.device.cluster.interconnect.DftWires
 import zhujiang.device.uncore.UncoreComplex
 
-class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with ImplicitReset {
+class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with ImplicitReset {
   override protected val implicitClock = Wire(Clock())
   implicitClock := false.B.asClock
   override protected val implicitReset = Wire(AsyncReset())
@@ -42,8 +40,8 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
     val dma = Flipped(new AxiBundle(uncore.io.ext.dma.params))
     val ndreset = Output(Bool())
     val default_reset_vector = Input(UInt(raw.W))
+    val jtag = chiselTypeOf(uncore.io.debug.systemjtag.get)
   })
-  val jtag = IO(chiselTypeOf(uncore.io.debug.systemjtag.get))
   val dft = IO(Input(new DftWires))
   implicitReset := io.reset
 
@@ -57,7 +55,7 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
   uncore.io.ext.timerTick := io.rtc_clock
   uncore.io.ext.intr := io.ext_intr
   uncore.io.chip := io.chip
-  uncore.io.debug.systemjtag.foreach(_ <> jtag)
+  uncore.io.debug.systemjtag.foreach(_ <> io.jtag)
   uncore.clock := io.soc_clock
   uncore.dft := dft
   uncore.io.debug.dmactiveAck := uncore.io.debug.dmactive
@@ -67,6 +65,9 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
 
   private val nanhuNode = noc.io.cluster.groupBy(_.node.attr)("nanhu").head.node
   private val nanhuClusterDef = Definition(new CpuCluster(nanhuNode))
+  private val cpuNum = noc.io.cluster.map(_.node.cpuNum).sum
+
+  val core = if(p(RemoveCoreKey)) Some(IO(Vec(cpuNum, new CoreBlockTestIO(nanhuClusterDef.coreIoParams)))) else None
 
   for((icn, i) <- noc.io.cluster.zipWithIndex) {
     val clusterId = icn.node.clusterId
@@ -89,11 +90,7 @@ class SoC(implicit p:Parameters) extends ZJRawModule with ImplicitClock with Imp
       } else {
         cc.icn.misc.resetEnable(i) := false.B
       }
-      if(p(RemoveCoreKey)) {
-        val port = IO(chiselTypeOf(cc.core.get(i)))
-        cc.core.get(i) <> port
-        port.suggestName(s"core_$cid")
-      }
+      if(p(RemoveCoreKey)) core.get(cid) <> cc.core.get(i)
     }
   }
 }

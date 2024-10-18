@@ -51,10 +51,10 @@ def post_compile(rtl_dir:str, vcs:bool, jobs:int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Post Compilation Script for XS')
-    parser.add_argument('build', type=str, help='Build diretory')
+    parser.add_argument('rtl_dir', type=str, help='Build diretory')
     parser.add_argument('--vcs', action='store_true', help='VCS style assertion')
     parser.add_argument('-j', '--jobs', default=16, type=int, help='Parallel jobs', metavar='')
     args = parser.parse_args()
     curdir = os.path.abspath(os.getcwd())
-    rtl_dir = os.path.join(curdir, args.build)
+    rtl_dir = os.path.join(curdir, args.rtl_dir)
     post_compile(rtl_dir, args.vcs, args.jobs)

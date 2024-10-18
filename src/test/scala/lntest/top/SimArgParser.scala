@@ -1,36 +1,38 @@
-package linknan.generator
+package lntest.top
 
+import linknan.generator.{FullConfig, MinimalConfig, PrefixKey, ReducedConfig, RemoveCoreKey}
 import org.chipsalliance.cde.config.Parameters
 import xs.utils.perf.DebugOptionsKey
 
-object ArgParser {
+object SimArgParser {
   def apply(args: Array[String]): (Parameters, Array[String]) = {
     val configParam = args.filter(_ == "--config")
     val (configuration, stripCfgArgs) = if(configParam.isEmpty) {
-      println("Config is not assigned, use Full Configuration!")
-      (new FullConfig, args)
+      println("Config is not assigned, use Minimal Configuration!")
+      (new MinimalConfig, args)
     } else {
       val pos = args.indexOf(configParam.head)
       val cfgStr = args(pos + 1)
       val res = cfgStr match {
         case "reduced" => new ReducedConfig
-        case "minimal" => new MinimalConfig
-        case _ => new FullConfig
+        case "full" => new FullConfig
+        case _ => new MinimalConfig
       }
       val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)
       (res, newArgs)
     }
 
+
     var firrtlOpts = Array[String]()
-    var hasHelp: Boolean = false
 
     def parse(config: Parameters, args: List[String]): Parameters = {
       args match {
         case Nil => config
 
-        case "--help" :: tail =>
-          hasHelp = true
-          parse(config, tail)
+        case "--dramsim3" :: tail =>
+          parse(config.alter((site, here, up) => {
+            case DebugOptionsKey => up(DebugOptionsKey).copy(UseDRAMSim = true)
+          }), tail)
 
         case "--fpga-platform" :: tail =>
           parse(config.alter((site, here, up) => {
@@ -64,7 +66,6 @@ object ArgParser {
     }
 
     val cfg = parse(configuration, stripCfgArgs.toList)
-    if(hasHelp) firrtlOpts :+= "--help"
     (cfg, firrtlOpts)
   }
 }
