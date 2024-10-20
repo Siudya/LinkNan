@@ -17,8 +17,9 @@ rule("linknan.emu", function()
     local difftest_csrc_difftest = path.join(difftest_csrc, "difftest")
     local difftest_csrc_spikedasm = path.join(difftest_csrc, "plugin", "spikedasm")
     local difftest_csrc_verilator = path.join(difftest_csrc, "verilator")
+    local difftest_config = path.join(difftest, "config")
 
-    target:add("includedirs", "dependencies/difftest/config")
+    target:add("includedirs", difftest_config)
     target:add("files", path.join(difftest_vsrc_common, "*.sv"))
 
     target:add("includedirs", difftest_csrc_common)
