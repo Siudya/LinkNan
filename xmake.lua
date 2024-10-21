@@ -52,7 +52,7 @@ task("soc" , function()
     os.execv(py_exec, postcompile_opts)
 
     local harden_table = {"LNTop", "CoreWrapper", "CpuCluster", "DataCtrlUnit", "ProtocolCtrlUnit"}
-    local rel_scr_path = path.join("scripts", "linknan", "release.py")
+    local rel_scr_path = { path.join("scripts", "linknan", "release.py") }
     if option.get("release") then os.execv(py_exec, table.join2(rel_scr_path, harden_table)) end
   end)
 end)

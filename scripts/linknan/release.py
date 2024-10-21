@@ -5,7 +5,7 @@ import shutil
 from datetime import date
 import argparse
 
-module_instance_re = r"\s*(\w+)\s+\w+\s+\([.\s\w(),\/\*]*;"
+module_instance_re = r"\s+(\w+)\s+\w+\s+\([\x00-\x7f]*?;"
 module_definition_re = r"\s*module\s*\w+"
 macros_re_list = [r"\w*ClockGate$", r"\w*sram_array_[12]p\d+x\w*", r"\w*ClockManagerWrapper$"]
 
@@ -109,6 +109,5 @@ if __name__ == "__main__":
 
     rtl_dir = os.path.join(curdir, args.build)
     release_dir = os.path.join(curdir, f'Release-LinkNan-{date.today().strftime("%b-%d-%Y")}')
-    print(args.harden)
 
     release_pack(rtl_dir, release_dir, args.harden)
