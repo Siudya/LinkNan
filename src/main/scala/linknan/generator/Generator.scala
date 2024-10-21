@@ -2,8 +2,11 @@ package linknan.generator
 
 import chisel3.stage.ChiselGeneratorAnnotation
 import circt.stage.{ChiselStage, FirtoolOption}
+import difftest.DifftestModule
 import linknan.soc.LNTop
+import xijiang.tfb.TrafficBoardFileManager
 import xs.utils.FileRegisters
+import zhujiang.ZJParametersKey
 
 object Generator {
   val firtoolOps = Seq(
@@ -27,5 +30,7 @@ object SocGenerator extends App {
   (new LinkNanStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
     ChiselGeneratorAnnotation(() => new LNTop()(config))
   ))
+  if(!config(RemoveCoreKey)) DifftestModule.finish("XiangShan")
+  if(config(ZJParametersKey).tfbParams.isDefined) TrafficBoardFileManager.release("generated-src", "generated-src", config)
   FileRegisters.write(filePrefix = config(PrefixKey) + "LNTop.")
 }

@@ -59,7 +59,7 @@ class SimMMIO(cfgParams: AxiParams, dmaParams: AxiParams)(implicit p: config.Par
   )
 
   private val node = AXI4MasterNode(Seq(cfgDplmcParams))
-  val dma_node = AXI4SlaveNode(Seq(dmaDplmcSlvParams))
+  private val dma_node = AXI4SlaveNode(Seq(dmaDplmcSlvParams))
 
   private val flash = LazyModule(new AXI4Flash(Seq(AddressSet(0x10000000L, 0xfffffff))))
   private val uart = LazyModule(new AXI4UART(Seq(AddressSet(0x40600000L, 0xf))))

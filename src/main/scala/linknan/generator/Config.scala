@@ -12,7 +12,7 @@ import zhujiang.{ZJParameters, ZJParametersKey}
 case object PrefixKey extends Field[String]
 case object RemoveCoreKey extends Field[Boolean]
 
-class FullNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
+class FullNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -45,12 +45,11 @@ class FullNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => 
 
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data"),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg")
-    ),
-    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
+    )
   )
 })
 
-class ReducedNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
+class ReducedNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -67,12 +66,11 @@ class ReducedNocConfig(withTfb:Boolean = false) extends Config((site, here, up) 
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
-    ),
-    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
+    )
   )
 })
 
-class MinimalNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
+class MinimalNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -88,8 +86,7 @@ class MinimalNocConfig(withTfb:Boolean = false) extends Config((site, here, up) 
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
-    ),
-    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
+    )
   )
 })
 

@@ -20,26 +20,32 @@ import org.chipsalliance.cde.config.Parameters
 import chisel3.stage.ChiselGeneratorAnnotation
 import chisel3._
 import chisel3.util.ReadyValidIO
-import lntest.peripheral.{AXI4MemorySlave, SimJTAG}
+import lntest.peripheral.SimJTAG
 import freechips.rocketchip.diplomacy.{DisableMonitors, LazyModule}
 import xs.utils.{FileRegisters, GTimer}
 import difftest._
 import circt.stage.ChiselStage
 import linknan.generator.{Generator, PrefixKey, RemoveCoreKey}
 import linknan.soc.LNTop
+import xijiang.tfb.TrafficBoardFileManager
 import xs.utils.perf.DebugOptionsKey
+import zhujiang.ZJParametersKey
+import zhujiang.axi.AxiBundle
 
 class SimTop(implicit p: Parameters) extends Module {
   private val debugOpts = p(DebugOptionsKey)
 
   private val soc = Module(new LNTop)
-  private val l_simMMIO = LazyModule(new SimMMIO(soc.io.cfg.params, soc.io.dma.params))
-  private val simMMIO = Module(l_simMMIO.module)
+  private val l_simMMIO = if(p(RemoveCoreKey)) None else Some(LazyModule(new SimMMIO(soc.io.cfg.params, soc.io.dma.params)))
+  private val simMMIO = if(p(RemoveCoreKey)) None else Some(Module(l_simMMIO.get.module))
 
-  private val periCfg =  simMMIO.cfg.head
-  private val periDma = simMMIO.dma.head
-  private val socCfg =  soc.io.cfg
-  private val socDma = soc.io.dma
+  val io = IO(new Bundle(){
+    val logCtrl = if(p(RemoveCoreKey)) None else Some(new LogCtrlIO)
+    val perfInfo = if(p(RemoveCoreKey)) None else Some(new PerfInfoIO)
+    val uart = if(p(RemoveCoreKey)) None else Some(new UARTIO)
+    val dma = if(p(RemoveCoreKey)) Some(Flipped(new AxiBundle(soc.io.dma.params))) else None
+    val cfg = if(p(RemoveCoreKey)) Some(new AxiBundle(soc.io.cfg.params)) else None
+  })
 
   private def connByName(sink:ReadyValidIO[Bundle], src:ReadyValidIO[Bundle]):Unit = {
     sink.valid := src.valid
@@ -51,28 +57,34 @@ class SimTop(implicit p: Parameters) extends Module {
       if(sendMap.contains(name)) data := sendMap(name).asTypeOf(data)
     }
   }
-  connByName(periCfg.aw, socCfg.aw)
-  connByName(periCfg.ar, socCfg.ar)
-  connByName(periCfg.w, socCfg.w)
-  connByName(socCfg.r, periCfg.r)
-  connByName(socCfg.b, periCfg.b)
 
-  connByName(socDma.aw, periDma.aw)
-  connByName(socDma.ar, periDma.ar)
-  connByName(socDma.w, periDma.w)
-  connByName(periDma.r, socDma.r)
-  connByName(periDma.b, socDma.b)
+  if(p(RemoveCoreKey)) {
+    io.dma.get <> soc.io.dma
+    io.cfg.get <> soc.io.cfg
+    soc.io.ext_intr := 0.U
+  } else {
+    soc.io.ext_intr := simMMIO.get.io.interrupt.intrVec
+    val periCfg = simMMIO.get.cfg.head
+    val periDma = simMMIO.get.dma.head
+    val socCfg =  soc.io.cfg
+    val socDma = soc.io.dma
 
+    connByName(periCfg.aw, socCfg.aw)
+    connByName(periCfg.ar, socCfg.ar)
+    connByName(periCfg.w, socCfg.w)
+    connByName(socCfg.r, periCfg.r)
+    connByName(socCfg.b, periCfg.b)
 
-  private val l_simAXIMem = AXI4MemorySlave(
-    l_simMMIO.dma_node,
-    16L * 1024 * 1024 * 1024,
-    useBlackBox = true,
-    dynamicLatency = debugOpts.UseDRAMSim,
-    pureDram = p(RemoveCoreKey)
-  )
+    connByName(socDma.aw, periDma.aw)
+    connByName(socDma.ar, periDma.ar)
+    connByName(socDma.w, periDma.w)
+    connByName(periDma.r, socDma.r)
+    connByName(periDma.b, socDma.b)
+  }
+
+  private val l_simAXIMem = LazyModule(new DummyDramMoudle(soc.io.ddr.params))
   private val simAXIMem = Module(l_simAXIMem.module)
-  private val memAxi = l_simAXIMem.io_axi4.head
+  private val memAxi = simAXIMem.axi.head
   connByName(memAxi.aw, soc.io.ddr.aw)
   connByName(memAxi.ar, soc.io.ddr.ar)
   connByName(memAxi.w, soc.io.ddr.w)
@@ -89,39 +101,36 @@ class SimTop(implicit p: Parameters) extends Module {
   soc.io.cluster_clocks.foreach(_ := clock)
   soc.io.soc_clock := clock
   soc.io.reset := (reset.asBool || soc.io.ndreset).asAsyncReset
-  soc.io.ext_intr := simMMIO.io.interrupt.intrVec
   soc.dft := DontCare
   soc.dft.reset.lgc_rst_n := true.B.asAsyncReset
   soc.io.default_reset_vector := 0x10000000L.U
   soc.io.chip := 0.U
 
-  val success = Wire(Bool())
-  val jtag = Module(new SimJTAG(tickDelay=3))
-  soc.io.jtag.reset := reset.asAsyncReset
-  jtag.connect(soc.io.jtag.jtag, clock, reset.asBool, !reset.asBool, success, jtagEnable = true)
-  soc.io.jtag.mfr_id := 0.U(11.W)
-  soc.io.jtag.part_number := 0.U(16.W)
-  soc.io.jtag.version := 0.U(4.W)
+  if(p(RemoveCoreKey)) {
+    soc.io.jtag := DontCare
+  } else {
+    val success = Wire(Bool())
+    val jtag = Module(new SimJTAG(tickDelay = 3))
+    soc.io.jtag.reset := reset.asAsyncReset
+    jtag.connect(soc.io.jtag.jtag, clock, reset.asBool, !reset.asBool, success, jtagEnable = true)
+    soc.io.jtag.mfr_id := 0.U(11.W)
+    soc.io.jtag.part_number := 0.U(16.W)
+    soc.io.jtag.version := 0.U(4.W)
+    simMMIO.get.io.uart <> io.uart.get
+  }
 
-  val io = IO(new Bundle(){
-    val logCtrl = new LogCtrlIO
-    val perfInfo = new PerfInfoIO
-    val uart = new UARTIO
-  })
   val core = if(p(RemoveCoreKey)) Some(IO(soc.core.get.cloneType)) else None
   core.foreach(_ <> soc.core.get)
 
-  simMMIO.io.uart <> io.uart
-
-  if (!debugOpts.FPGAPlatform && debugOpts.EnablePerfDebug) {
+  if (!debugOpts.FPGAPlatform && debugOpts.EnablePerfDebug && !p(RemoveCoreKey)) {
     val timer = Wire(UInt(64.W))
     val logEnable = Wire(Bool())
     val clean = Wire(Bool())
     val dump = Wire(Bool())
     timer := GTimer()
-    logEnable := (timer >= io.logCtrl.log_begin) && (timer < io.logCtrl.log_end)
-    clean := RegNext(io.perfInfo.clean, false.B)
-    dump := io.perfInfo.dump
+    logEnable := (timer >= io.logCtrl.get.log_begin) && (timer < io.logCtrl.get.log_end)
+    clean := RegNext(io.perfInfo.get.clean, false.B)
+    dump := io.perfInfo.get.dump
     dontTouch(timer)
     dontTouch(logEnable)
     dontTouch(clean)
@@ -140,5 +149,6 @@ object SimGenerator extends App {
       DisableMonitors(p => new SimTop()(p))(config)
     })
   ))
+  if(config(ZJParametersKey).tfbParams.isDefined) TrafficBoardFileManager.release("generated-src", "generated-src", config)
   FileRegisters.write(filePrefix = config(PrefixKey) + "LNTop.")
 }
