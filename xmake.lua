@@ -1,6 +1,6 @@
 local prj_dir = os.curdir()
 
-task("soc")
+task("soc" , function()
   set_menu {
     usage = "xmake soc [options]",
     description = "Generate soc rtl",
@@ -55,32 +55,26 @@ task("soc")
     local rel_scr_path = path.join("scripts", "linknan", "release.py")
     if option.get("release") then os.execv(py_exec, table.join2(rel_scr_path, harden_table)) end
   end)
-task_end()
+end)
 
-includes("scripts/xmake/rules/verilator/rules.lua")
-includes("scripts/xmake/options/options.lua")
+task("emu", function()
+  set_menu {
+    usage = "xmake emu [options]",
+    description = "Compile with verilator",
+    options = {
+      {'r', "rebuild", "k", nil, "forcely rebuild"},
+      {'s', "sparse_mem", "k", nil, "use sparse mem"},
+      {nil, "dramsim3", "k", nil, "use dramsim3"},
+      {nil, "dramsim3_home", "kv", "", "dramsim3 home dir"},
+      {'t', "threads", "kv", "16", "simulation threads"},
+      {'j', "jobs", "kv", "16", "compilation jobs"},
+      {'r', "ref", "kv", "Spike", "reference model"},
+      {'c', "config", "kv", "minimal", "soc config"}
+    }
+  }
 
-target("emu", function()
-  set_toolchains("@verilator")
-  add_rules("linknan.emu")
-  add_values("verilator.top", "SimTop")
-  add_options("threads")
-  add_options("dramsim-home")
-  add_options("dramsim")
-  add_options("ref-model")
-  add_options("volatile-chisel")
-
-  on_load(function (target)
-    import("core.base.task")
-    local rtl_gen_opts = {sim = true, all_in_one = true, config = "minimal"}
-    if has_config("dramsim") then
-      target:add("values", "verilator.with-dramsim", "true")
-      target:add("values", "verilator.dramsim-home", "$(dramsim-home)")
-      table.join2(rtl_gen_opts, {dramsim3 = true})
-    end
-    target:add("values", "verilator.ref-model", "$(ref-model)")
-    target:add("values", "verilator.threads", "$(threads)")
-    if has_config("volatile-chisel") then task.run("soc", rtl_gen_opts) end
+  on_run(function()
+    import("scripts.xmake.verilator").emu_comp()
   end)
 end)
 
@@ -90,44 +84,17 @@ task("emu_run", function ()
     description = "Run emu",
     options = {
       {'d', "dump", "k", nil, "dump full wave and disable fork"},
-      {'i', "image", "kv", nil, "image bin name"},
-      {'z', "imagez", "kv", nil, "image gz name"},
-      {'b', "base", "kv", "ready-to-run", "image base dir"},
-      {'r', "ref", "kv", "riscv64-spike-so", "reference model"},
-      {'s', "seed", "kv", "1234", "reference model"},
+      {'i', "image", "kv", nil, "bin image bin name"},
+      {'z', "imagez", "kv", nil, "gz image name"},
+      {nil, "case_base", "kv", "ready-to-run", "image base dir"},
+      {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
+      {nil, "ref_base", "kv", "ready-to-run", "reference model base dir"},
+      {'s', "seed", "kv", "1234", "random seed"},
     }
   }
-  local chisel_opts =  {"mill", "-i"}
 
   on_run(function()
-    import("core.base.option")
-    assert(option.get("image") or option.get("imagez"))
-    local abs_dir = os.curdir()
-    local image_file = ""
-    local abs_base_dir = path.join(abs_dir, option.get("base"))
-    if option.get("imagez") then image_file = path.join(abs_base_dir, option.get("imagez") .. ".gz") end
-    if option.get("image") then image_file = path.join(abs_base_dir, option.get("image") .. ".bin") end
-    local image_basename = path.basename(image_file)
-    local sim_dir = path.join("sim", "emu", image_basename)
-    local ref_so = path.join(abs_base_dir, option.get("ref"))
-    if os.exists(sim_dir) then os.rm(path.join(sim_dir, "*")) else os.mkdir(sim_dir) end
-    os.ln(path.join(abs_dir, "sim", "emu", "comp", "emu"), path.join(sim_dir, "emu"))
-    os.cd(sim_dir)
-    local sh_str = "chmod +x emu" .. " && ( ./emu"
-    if not option.get("dump") then
-      sh_str = sh_str .. " --enable-fork --fork-interval=15"
-    else
-      sh_str = sh_str .. " --dump-wave-full"
-    end
-    sh_str = sh_str .. " --diff " .. ref_so
-    sh_str = sh_str .. " -i " .. image_file
-    sh_str = sh_str .. " -s " .. option.get("seed")
-    sh_str = sh_str .. " --wave-path dump.vcd"
-    sh_str = sh_str .. " ) 2>assert.log |tee run.log"
-    io.writefile("tmp.sh", sh_str)
-    os.execv(os.shell(), {"tmp.sh"})
-    print(sh_str)
-    os.rm("tmp.sh")
+    import("scripts.xmake.verilator").emu_run()
   end)
 end)
 
@@ -136,26 +103,53 @@ task("simv", function()
     usage = "xmake simv [options]",
     description = "Compile with vcs",
     options = {
-      {'g', "generate_rtl", "k", nil, "do not dump wave"},
+      {'r', "rebuild", "k", nil, "forcely rebuild"},
       {'d', "no_fsdb", "k", nil, "do not dump wave"},
       {'s', "sparse_mem", "k", nil, "use sparse mem"},
-      {'r', "ref", "kv", "Spike", "image bin name"},
-      {'c', "config", "kv", "minimal", "image bin name"}
+      {'r', "ref", "kv", "Spike", "reference model"},
+      {'c', "config", "kv", "minimal", "rtl config"}
     }
   }
 
   on_run(function()
-    import("core.base.task")
-    import("core.base.option")
-    if option.get("generate_rtl") then 
-      local build_dir = path.join(os.curdir(), "build")
-      if os.exists(build_dir) then os.rmdir(build_dir) end
-      task.run("soc", {vcs = true, sim = true, config = option.get("config")}) 
-    end
-    import("scripts.xmake.rules.vcs.vcs").simv_comp()
+    import("scripts.xmake.vcs").simv_comp()
   end)
 end)
 
+task("simv-run", function ()
+  set_menu {
+    usage = "xmake simv-run [options]",
+    description = "Run simv",
+    options = {
+      {nil, "no_dump", "k", nil, "do not dump waveform"},
+      {nil, "no_diff", "k", nil, "disable difftest"},
+      {'i', "image", "kv", nil, "bin image bin name"},
+      {'z', "imagez", "kv", nil, "gz image name"},
+      {nil, "case_base", "kv", "ready-to-run", "image base dir"},
+      {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
+      {nil, "ref_base", "kv", "ready-to-run", "reference model base dir"}
+    }
+  }
+
+  on_run(function()
+    import("scripts.xmake.vcs").simv_run()
+  end)
+end)
+
+task("verdi", function ()
+  set_menu {
+    usage = "xmake verdi [options]",
+    description = "Display waveform with verdi",
+    options = {
+      {'e', "verilator", "k", nil, "display emu .vcd waveform"},
+      {'i', "image", "kv", nil, "bin image bin name"},
+    }
+  }
+
+  on_run(function () 
+    import("scripts.xmake.verdi").verdi()
+  end)
+end)
 
 task("idea", function()
   on_run(function()
@@ -181,8 +175,9 @@ end)
 
 task("clean", function()
   on_run(function()
-    os.rmdir("build/*")
-    os.rmdir("sim/*")
+    os.rmdir(path.join("build", "*"))
+    os.rmdir(path.join("sim", "*"))
+    os.rm(path.join("out", "*.dep"))
   end)
   set_menu {}
 end)

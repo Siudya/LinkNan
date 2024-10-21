@@ -4,7 +4,7 @@
 # Compile source code
 Notice: Make sure that you have installed `xmake`. If not, please refer to the [xmake](https://github.com/xmake-io/xmake) official website for installation.
 ```bash
-xmake run init
-xmake run comp
-xmake run soc
+xmake init
+xmake comp
+xmake soc
 ```
