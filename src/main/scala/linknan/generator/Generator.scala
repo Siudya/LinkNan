@@ -30,7 +30,7 @@ object SocGenerator extends App {
   (new LinkNanStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
     ChiselGeneratorAnnotation(() => new LNTop()(config))
   ))
-  if(!config(RemoveCoreKey)) DifftestModule.finish("XiangShan")
-  if(config(ZJParametersKey).tfbParams.isDefined) TrafficBoardFileManager.release("generated-src", "generated-src", config)
+
+  if(config(ZJParametersKey).tfbParams.isDefined) TrafficBoardFileManager.release("cosim", "cosim", config)
   FileRegisters.write(filePrefix = config(PrefixKey) + "LNTop.")
 }
