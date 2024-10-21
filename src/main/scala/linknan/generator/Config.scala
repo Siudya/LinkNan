@@ -4,6 +4,7 @@ import SimpleL2.Configs.{L2Param, L2ParamKey}
 import org.chipsalliance.cde.config.{Config, _}
 import xiangshan.cache.DCacheParameters
 import xiangshan.{XSCoreParameters, XSCoreParamsKey}
+import xijiang.tfb.TrafficBoardParams
 import xijiang.{NodeParam, NodeType}
 import xs.utils.perf.{DebugOptions, DebugOptionsKey}
 import zhujiang.{ZJParameters, ZJParametersKey}
@@ -11,7 +12,7 @@ import zhujiang.{ZJParameters, ZJParametersKey}
 case object PrefixKey extends Field[String]
 case object RemoveCoreKey extends Field[Boolean]
 
-class FullNocConfig extends Config((site, here, up) => {
+class FullNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -19,26 +20,37 @@ class FullNocConfig extends Config((site, here, up) => {
   case RemoveCoreKey => false
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
+      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
-      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.S, bankId = 2, splitFlit = true),
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
-      NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
+      NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
+
       NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
+      NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
+
+      NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true),
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
-      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.S, bankId = 2, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HF, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
-      NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
-      NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
+
+      NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data"),
+      NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg")
     ),
-    tfbParams = None
+    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
   )
 })
 
-class ReducedNocConfig extends Config((site, here, up) => {
+class ReducedNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -56,11 +68,11 @@ class ReducedNocConfig extends Config((site, here, up) => {
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
     ),
-    tfbParams = None
+    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
   )
 })
 
-class MinimalNocConfig extends Config((site, here, up) => {
+class MinimalNocConfig(withTfb:Boolean = false) extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
@@ -77,7 +89,7 @@ class MinimalNocConfig extends Config((site, here, up) => {
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg"),
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data")
     ),
-    tfbParams = None
+    tfbParams = if(withTfb) Some(TrafficBoardParams()) else None
   )
 })
 
@@ -89,7 +101,7 @@ class LLCConfig(sizeInMiB:Int = 16, ways:Int = 16, sfWays:Int = 16) extends Conf
   )
 })
 
-class L2Config(sizeInKiB:Int = 1024, ways:Int = 8, slices:Int = 4) extends Config((site, here, up) => {
+class L2Config(sizeInKiB:Int = 1024, ways:Int = 8, slices:Int = 2) extends Config((site, here, up) => {
   case L2ParamKey => up(L2ParamKey).copy(
     ways = ways,
     nrSlice = slices,
