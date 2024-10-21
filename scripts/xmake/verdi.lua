@@ -9,8 +9,9 @@ function verdi ()
   else
     sim_dir = path.join(sim_dir, "simv")
   end
-  sim_dir = path.join(sim_dir, option.get(image))
+  sim_dir = path.join(sim_dir, option.get("image"))
 
+  os.cd(sim_dir)
   local cmds = "verdi -ssf "
   if option.get("verilator") then
     cmds = cmds .. option.get("image") .. ".vcd"

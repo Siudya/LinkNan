@@ -95,7 +95,7 @@ function emu_comp()
     cxx_flags = cxx_flags .. " -DEMU_THREAD=" .. option.get("threads")
   end
 
-  local verilator_flags = "verilator --exe --cc -O3 --top-module SimTop --assert --x-assign unique --trace"
+  local verilator_flags = "verilator --exe --cc --top-module SimTop --assert --x-assign unique --trace"
   verilator_flags = verilator_flags .. " +define+VERILATOR=1 +define+PRINTF_COND=1 +define+DIFFTEST"
   verilator_flags = verilator_flags .. " +define+RANDOMIZE_REG_INIT +define+RANDOMIZE_MEM_INIT"
   verilator_flags = verilator_flags .. " +define+RANDOMIZE_GARBAGE_ASSIGN +define+RANDOMIZE_DELAY=0"
@@ -129,7 +129,9 @@ function emu_comp()
   os.rm("vcs_cmd.sh")
 
   depend.on_changed(function()
-    os.execv("make", {"-f", "VSimTop.mk", "-j", option.get("jobs")})
+    local make_opts = {"VM_PARALLEL_BUILDS=1",  "OPT_FAST=-O3"}
+    table.join2(make_opts, {"-f", "VSimTop.mk", "-j", option.get("jobs")})
+    os.execv("make", make_opts)
   end, {
     files = path.join(comp_dir, "VSimTop.mk"),
     dependfile = path.join(comp_dir, "emu.ln.dep")
@@ -137,10 +139,10 @@ function emu_comp()
   
   local build_dir = path.join(abs_base, "build")
   local emu_target = path.join(build_dir, "emu")
-  if os.exists(emu_target) then
-    os.rm(emu_target)
+  if not os.exists(emu_target) then
+    os.ln(path.join(comp_dir, "emu"), emu_target)
   end
-  os.ln(path.join(comp_dir, "emu"), emu_target)
+  
 end
 
 function emu_run()
@@ -152,7 +154,7 @@ function emu_run()
   if option.get("imagez") then image_file = path.join(abs_case_base_dir, option.get("imagez") .. ".gz") end
   if option.get("image") then image_file = path.join(abs_case_base_dir, option.get("image") .. ".bin") end
   local image_basename = path.basename(image_file)
-  local sim_dir = path.join("sim", "simv", image_basename)
+  local sim_dir = path.join("sim", "emu", image_basename)
   local ref_so = path.join(abs_ref_base_dir, option.get("ref"))
   if os.exists(sim_dir) then os.rm(path.join(sim_dir, "*")) else os.mkdir(sim_dir) end
   os.ln(path.join(abs_dir, "sim", "emu", "comp", "emu"), path.join(sim_dir, "emu"))

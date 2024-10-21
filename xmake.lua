@@ -78,7 +78,7 @@ task("emu", function()
   end)
 end)
 
-task("emu_run", function ()
+task("emu-run", function ()
   set_menu {
     usage = "xmake emu_run [options]",
     description = "Run emu",
@@ -86,9 +86,9 @@ task("emu_run", function ()
       {'d', "dump", "k", nil, "dump full wave and disable fork"},
       {'i', "image", "kv", nil, "bin image bin name"},
       {'z', "imagez", "kv", nil, "gz image name"},
-      {nil, "case_base", "kv", "ready-to-run", "image base dir"},
+      {nil, "case_dir", "kv", "ready-to-run", "image base dir"},
       {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
-      {nil, "ref_base", "kv", "ready-to-run", "reference model base dir"},
+      {nil, "ref_dir", "kv", "ready-to-run", "reference model base dir"},
       {'s', "seed", "kv", "1234", "random seed"},
     }
   }
@@ -125,9 +125,9 @@ task("simv-run", function ()
       {nil, "no_diff", "k", nil, "disable difftest"},
       {'i', "image", "kv", nil, "bin image bin name"},
       {'z', "imagez", "kv", nil, "gz image name"},
-      {nil, "case_base", "kv", "ready-to-run", "image base dir"},
+      {nil, "case_dir", "kv", "ready-to-run", "image base dir"},
       {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
-      {nil, "ref_base", "kv", "ready-to-run", "reference model base dir"}
+      {nil, "ref_dir", "kv", "ready-to-run", "reference model base dir"}
     }
   }
 
@@ -142,7 +142,7 @@ task("verdi", function ()
     description = "Display waveform with verdi",
     options = {
       {'e', "verilator", "k", nil, "display emu .vcd waveform"},
-      {'i', "image", "kv", nil, "bin image bin name"},
+      {'i', "image", "kv", nil, "image name"},
     }
   }
 
