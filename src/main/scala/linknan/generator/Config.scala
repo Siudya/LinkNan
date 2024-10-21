@@ -21,27 +21,23 @@ class FullNocConfig extends Config((site, here, up) => {
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HF, bankId = 0, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 2, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
 
       NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
 
       NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 2, splitFlit = true),
       NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.HF, bankId = 1, splitFlit = true),
+      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 1, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
-      NodeParam(nodeType = NodeType.CC, cpuNum = 2, splitFlit = true, outstanding = 8, attr = "nanhu"),
 
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data"),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg")
