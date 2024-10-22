@@ -27,7 +27,7 @@ object SocGenerator extends App {
   val (config, firrtlOpts) = ArgParser(args)
   xs.utils.GlobalData.prefix = config(PrefixKey)
   difftest.GlobalData.prefix = config(PrefixKey)
-  (new LinkNanStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
+  (new ChiselStage).execute(firrtlOpts, Generator.firtoolOps ++ Seq(
     ChiselGeneratorAnnotation(() => new LNTop()(config))
   ))
 
