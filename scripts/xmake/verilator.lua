@@ -14,6 +14,8 @@ function emu_comp()
   end
   local chisel_dep_srcs = os.iorun("find " .. abs_base .. " -name \"*.scala\""):split('\n')
   table.join2(chisel_dep_srcs, {path.join(abs_base, "build.sc")})
+  table.join2(chisel_dep_srcs, {path.join(abs_base, "xmake.lua")})
+
   depend.on_changed(function ()
     local build_dir = path.join(abs_base, "build")
     if os.exists(build_dir) then os.rmdir(build_dir) end
@@ -115,25 +117,28 @@ function emu_comp()
   os.cd(comp_dir)
   io.writefile("verilator_cmd.sh", verilator_flags)
 
-  local verilator_depend_srcs = vsrc
-  table.join2(verilator_depend_srcs, csrc)
-  table.join2(verilator_depend_srcs, headers)
+  local verilator_depends_files = vsrc
+  table.join2(verilator_depends_files, { path.join(abs_base, "scripts", "xmake", "verilator.lua") })
 
   depend.on_changed(function()
     print(verilator_flags)
     os.execv(os.shell(), { "verilator_cmd.sh" })
   end, {
-    files = verilator_depend_srcs,
+    files = verilator_depends_files,
     dependfile = path.join(comp_dir, "verilator.ln.dep")
   })
   os.rm("vcs_cmd.sh")
+
+  local gmake_depend_files = csrc
+  table.join2(gmake_depend_files, headers)
+  table.join2(gmake_depend_files, { path.join(comp_dir, "VSimTop.mk") })
 
   depend.on_changed(function()
     local make_opts = {"VM_PARALLEL_BUILDS=1",  "OPT_FAST=-O3"}
     table.join2(make_opts, {"-f", "VSimTop.mk", "-j", option.get("jobs")})
     os.execv("make", make_opts)
   end, {
-    files = path.join(comp_dir, "VSimTop.mk"),
+    files = gmake_depend_files,
     dependfile = path.join(comp_dir, "emu.ln.dep")
   })
   

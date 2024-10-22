@@ -12,6 +12,8 @@ function simv_comp()
   local abs_base = os.curdir()
   local chisel_dep_srcs = os.iorun("find " .. abs_base .. " -name \"*.scala\""):split('\n')
   table.join2(chisel_dep_srcs, {path.join(abs_base, "build.sc")})
+  table.join2(chisel_dep_srcs, {path.join(abs_base, "xmake.lua")})
+
   depend.on_changed(function ()
     local build_dir = path.join(abs_base, "build")
     if os.exists(build_dir) then os.rmdir(build_dir) end
@@ -107,6 +109,8 @@ function simv_comp()
   local depend_srcs = vsrc
   table.join2(depend_srcs, csrc)
   table.join2(depend_srcs, headers)
+  table.join2(depend_srcs, { path.join(abs_base, "scripts", "xmake", "vcs.lua") })
+
   depend.on_changed(function()
     print(vcs_flags)
     os.execv(os.shell(), { "vcs_cmd.sh" })
