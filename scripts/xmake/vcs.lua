@@ -67,7 +67,7 @@ function simv_comp()
   end
   io.writefile(csrc_filelist_path, csrc_filelist_contents)
 
-  local cxx_flags = "-std=c++11 -static -Wall -DNUM_CORES=1"
+  local cxx_flags = "-std=c++17 -static -Wall -DNUM_CORES=1"
   cxx_flags = cxx_flags .. " -I" .. design_csrc
   cxx_flags = cxx_flags .. " -I" .. difftest_csrc_common
   cxx_flags = cxx_flags .. " -I" .. difftest_csrc_difftest
