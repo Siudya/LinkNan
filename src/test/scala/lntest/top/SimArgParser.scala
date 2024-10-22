@@ -52,6 +52,7 @@ object SimArgParser {
         case "--no-cores" :: tail =>
           parse(config.alter((site, here, up) => {
             case RemoveCoreKey => true
+            case DebugOptionsKey => up(DebugOptionsKey).copy(EnableDebug = true) // For ZhuJiang DontTouch IO
           }), tail)
 
         case "--prefix" :: confString :: tail =>
