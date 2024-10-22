@@ -1,8 +1,13 @@
 import os
 import re
 import concurrent.futures
-from tqdm import tqdm
 import argparse
+
+try:
+    from tqdm import tqdm
+    use_tqdm = True
+except ImportError:
+    use_tqdm = False
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 cmd = "sed -i -E -f {} {}"
@@ -47,7 +52,8 @@ def post_compile(rtl_dir:str, vcs:bool, jobs:int):
     print("Doing post-compiling procedures!")
     with concurrent.futures.ThreadPoolExecutor(jobs) as executor:
         results = concurrent.futures.as_completed([executor.submit(lambda x: x.run(), w) for w in worker_list])
-        list(tqdm(results, total=len(worker_list)))
+        if use_tqdm:
+            list(tqdm(results, total=len(worker_list)))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Post Compilation Script for XS')
