@@ -17,19 +17,20 @@ import zhujiang.device.cluster.ClusterInterconnectComplex
 import zhujiang.device.cluster.interconnect.ClusterDeviceBundle
 import zhujiang.tilelink.TilelinkParams
 
-class ClusterSharedUnit(ioPortParam: TLBundleParameters, l2PortParams: TLBundleParameters, node:Node)(implicit p:Parameters) extends LazyModule with BindingScope with HasXSParameter {
+class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implicit p:Parameters) extends LazyModule with BindingScope with HasXSParameter {
 
-  private val l2cache = LazyModule(new SimpleL2CacheDecoupled)
+  private val l2cache = LazyModule(new SimpleL2CacheDecoupled(tlEdgeInOpt = Some(l2EdgeIn)))
   private val l2xbar = LazyModule(new TLXbar)
   private val l2binder = LazyModule(new BankBinder(64 * (coreParams.L2NBanks - 1)))
   private val l2EccIntSink = IntSinkNode(IntSinkPortSimple(1, 1))
-
+  private val cioBundle = cioEdge.bundle
+  private val l2Bundle = l2EdgeIn.bundle
   private val l2param = p(L2ParamKey)
   private val cachePortParams = TLMasterPortParameters.v2(
     masters = Seq(
       TLMasterParameters.v1(
         name = name,
-        sourceId = IdRange(0, 1 << l2PortParams.sourceBits),
+        sourceId = IdRange(0, 1 << l2EdgeIn.bundle.sourceBits),
         supportsProbe = TransferSizes(l2param.blockBytes)
       )
     ),
@@ -52,13 +53,14 @@ class ClusterSharedUnit(ioPortParam: TLBundleParameters, l2PortParams: TLBundleP
     val io = IO(new Bundle{
       val clock = Input(Clock())
       val reset = Input(AsyncReset())
-      val core = Vec(node.cpuNum, Flipped(new CoreWrapperIO(ioPortParam, l2PortParams)))
+      val core = Vec(node.cpuNum, Flipped(new CoreWrapperIO(cioBundle, l2Bundle)))
       val icn = new ClusterDeviceBundle(node)
       val pllCfg = Output(Vec(8, UInt(32.W)))
       val pllLock = Input(Bool())
     })
     dontTouch(io)
-    private val cioParams = TilelinkParams(ioPortParam.addressBits, ioPortParam.sourceBits, ioPortParam.sinkBits, ioPortParam.dataBits)
+
+    private val cioParams = TilelinkParams(cioBundle.addressBits, cioBundle.sourceBits, cioBundle.sinkBits, cioBundle.dataBits)
     private val l2 = l2cache.module
     private val resetSyncAll = withClockAndReset(io.clock, io.reset) { ResetGen(dft = Some(io.icn.dft.reset))}
     private val resetSyncMisc = withClockAndReset(io.clock, resetSyncAll) { ResetGen(dft = Some(io.icn.dft.reset))}

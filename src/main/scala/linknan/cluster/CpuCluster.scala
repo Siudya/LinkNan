@@ -41,10 +41,10 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
   private val coreDef = if(!removeCore) Some(Definition(coreGen.module)) else None
   private val coreSeq = if(!removeCore) Some(Seq.fill(node.cpuNum)(Instance(coreDef.get))) else None
   coreSeq.foreach(_.zipWithIndex.foreach({case(c, i) => c.suggestName(s"core_$i")}))
-  private val cioParams = coreGen.cioNode.edges.in.head.bundle
-  private val cl2Params = coreGen.l2Node.edges.in.head.bundle
+  private val cioEdge = coreGen.cioNode.edges.in.head
+  private val cl2Edge = coreGen.l2Node.edges.in.head
 
-  private val csu = LazyModule(new ClusterSharedUnit(cioParams, cl2Params, node)(p.alterPartial({
+  private val csu = LazyModule(new ClusterSharedUnit(cioEdge, cl2Edge, node)(p.alterPartial({
     case MonitorsEnabled => false
     case TLUserKey => TLUserParams(aliasBits = dcacheParams.aliasBitsOpt.getOrElse(0))
     case L2ParamKey => l2Params.copy(
@@ -57,7 +57,7 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
   })))
   private val _csu = Module(csu.module)
 
-  @public val coreIoParams = CoreBlockTestIOParams(cioParams, cl2Params)
+  @public val coreIoParams = CoreBlockTestIOParams(cioEdge.bundle, cl2Edge.bundle)
   @public val icn = IO(new ClusterDeviceBundle(node))
   @public val core = if(removeCore) Some(IO(Vec(node.cpuNum, new CoreBlockTestIO(coreIoParams)))) else None
 
