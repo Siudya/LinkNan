@@ -16,19 +16,24 @@
 
 package lntest.top
 
+import SimpleL2.Configs.L2ParamKey
+import SimpleL2.chi.CHIBundleParameters
 import org.chipsalliance.cde.config.Parameters
 import chisel3.stage.ChiselGeneratorAnnotation
 import chisel3._
 import chisel3.util.ReadyValidIO
 import lntest.peripheral.SimJTAG
-import freechips.rocketchip.diplomacy.{DisableMonitors, LazyModule}
+import freechips.rocketchip.diplomacy.{DisableMonitors, LazyModule, MonitorsEnabled}
 import xs.utils.{FileRegisters, GTimer}
 import difftest._
 import circt.stage.ChiselStage
+import linknan.cluster.CoreBlockTestIOParams
 import linknan.generator.{Generator, PrefixKey, RemoveCoreKey}
 import linknan.soc.LNTop
+import xiangshan.XSCoreParamsKey
 import xijiang.tfb.TrafficBoardFileManager
 import xs.utils.perf.DebugOptionsKey
+import xs.utils.tl.{TLUserKey, TLUserParams}
 import zhujiang.ZJParametersKey
 import zhujiang.axi.AxiBundle
 
@@ -119,8 +124,23 @@ class SimTop(implicit p: Parameters) extends Module {
     simMMIO.get.io.uart <> io.uart.get
   }
 
-  val core = if(p(RemoveCoreKey)) Some(IO(soc.core.get.cloneType)) else None
-  core.foreach(_ <> soc.core.get)
+  if(p(RemoveCoreKey)) {
+    for(i <- soc.core.get.indices) {
+      val noc = soc.core.get(i)
+      val hub = LazyModule(new SimCoreHub(CoreBlockTestIOParams(noc.cio.params, noc.l2.params))(p.alterPartial({
+        case MonitorsEnabled => false
+        case TLUserKey =>
+          val dcacheParams = p(XSCoreParamsKey).dcacheParametersOpt.get
+          TLUserParams(aliasBits = dcacheParams.aliasBitsOpt.getOrElse(0))
+      })))
+      val _hub = Module(hub.module)
+      val ext = IO(new SimCoreHubExtIO(_hub.io.ext.cio.params, _hub.io.ext.dcache.params, _hub.io.ext.icache.params))
+      ext.suggestName(s"core_$i")
+      hub.suggestName(s"corehub_$i")
+      ext <> _hub.io.ext
+      noc <> _hub.io.noc
+    }
+  }
 
   if (!debugOpts.FPGAPlatform && debugOpts.EnablePerfDebug && !p(RemoveCoreKey)) {
     val timer = Wire(UInt(64.W))
