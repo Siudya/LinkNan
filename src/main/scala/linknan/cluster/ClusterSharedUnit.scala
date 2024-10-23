@@ -19,7 +19,7 @@ import zhujiang.tilelink.TilelinkParams
 
 class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implicit p:Parameters) extends LazyModule with BindingScope with HasXSParameter {
 
-  private val l2cache = LazyModule(new SimpleL2CacheDecoupled(tlEdgeInOpt = Some(l2EdgeIn)))
+  private val l2cache = LazyModule(new SimpleL2CacheDecoupled(/* tlEdgeInOpt = Some(l2EdgeIn)) */))
   private val l2xbar = LazyModule(new TLXbar)
   private val l2binder = LazyModule(new BankBinder(64 * (coreParams.L2NBanks - 1)))
   private val l2EccIntSink = IntSinkNode(IntSinkPortSimple(1, 1))
