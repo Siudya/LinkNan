@@ -6,12 +6,12 @@ import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
 import linknan.cluster.{CoreBlockTestIO, CpuCluster}
 import linknan.generator.{PrefixKey, RemoveCoreKey}
+import linknan.soc.uncore.UncoreComplex
 import zhujiang.{ZJRawModule, Zhujiang}
 import org.chipsalliance.cde.config.Parameters
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
 import zhujiang.axi.AxiBundle
 import zhujiang.device.cluster.interconnect.DftWires
-import zhujiang.device.uncore.UncoreComplex
 
 class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with ImplicitReset {
   override protected val implicitClock = Wire(Clock())
