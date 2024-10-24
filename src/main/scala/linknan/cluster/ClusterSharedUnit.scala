@@ -18,7 +18,6 @@ import zhujiang.device.cluster.interconnect.ClusterDeviceBundle
 import zhujiang.tilelink.TilelinkParams
 
 class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implicit p:Parameters) extends LazyModule with BindingScope with HasXSParameter {
-
   private val l2cache = LazyModule(new SimpleL2CacheDecoupled(/* tlEdgeInOpt = Some(l2EdgeIn)) */))
   private val l2xbar = LazyModule(new TLXbar)
   private val l2binder = LazyModule(new BankBinder(64 * (coreParams.L2NBanks - 1)))
@@ -26,21 +25,7 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
   private val cioBundle = cioEdge.bundle
   private val l2Bundle = l2EdgeIn.bundle
   private val l2param = p(L2ParamKey)
-  private val cachePortParams = TLMasterPortParameters.v2(
-    masters = Seq(
-      TLMasterParameters.v1(
-        name = name,
-        sourceId = IdRange(0, 1 << l2EdgeIn.bundle.sourceBits),
-        supportsProbe = TransferSizes(l2param.blockBytes)
-      )
-    ),
-    channelBytes = TLChannelBeatBytes(l2param.beatBytes),
-    minLatency = 1,
-    echoFields = Nil,
-    requestFields = Seq(new TLNanhuBusField),
-    responseKeys = Nil
-  )
-  private val cachePortNode = Seq.fill(node.cpuNum)(TLClientNode(Seq(cachePortParams)))
+  private val cachePortNode = Seq.fill(node.cpuNum)(TLClientNode(Seq(l2EdgeIn.master)))
   for(i <- 0 until node.cpuNum) {
     l2xbar.node :*= TLBuffer.chainNode(1, Some(s"core_${i}_cache_buffer")) :*= cachePortNode(i)
   }
