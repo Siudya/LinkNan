@@ -24,8 +24,12 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
   private val noc = Module(new Zhujiang)
   private val clusterNum = noc.io.cluster.length
   private val uncore = Module(new UncoreComplex(noc.io.soc.cfg.node, noc.io.soc.dma.node))
+  private val ddrSys = Module(new MemoryComplex(noc.io.ddr.cfg.node, noc.io.ddr.dat.node))
   uncore.io.async.cfg <> noc.io.soc.cfg
   noc.io.soc.dma <> uncore.io.async.dma
+  ddrSys.io.icn.cfg <> noc.io.ddr.cfg
+  ddrSys.io.icn.mem <> noc.io.ddr.dat
+  ddrSys.reset := noc.io.ddr.reset
 
   val io = IO(new Bundle{
     val reset = Input(AsyncReset())
@@ -35,7 +39,7 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
     val rtc_clock = Input(Bool())
     val ext_intr = Input(UInt(zjParams.externalInterruptNum.W))
     val chip = Input(UInt(nodeAidBits.W))
-    val ddr = new AxiBundle(noc.io.ddr.params)
+    val ddr = new AxiBundle(ddrSys.io.ddr.params)
     val cfg = new AxiBundle(uncore.io.ext.cfg.params)
     val dma = Flipped(new AxiBundle(uncore.io.ext.dma.params))
     val ndreset = Output(Bool())
@@ -45,7 +49,7 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
   val dft = IO(Input(new DftWires))
   implicitReset := io.reset
 
-  io.ddr <> noc.io.ddr
+  io.ddr <> ddrSys.io.ddr
   noc.io.chip := io.chip
   noc.dft := dft
   noc.clock := io.noc_clock
