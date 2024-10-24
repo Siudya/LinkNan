@@ -10,7 +10,7 @@ import xs.utils.ResetGen
 import zhujiang.device.async.{DeviceIcnAsyncBundle, DeviceSideAsyncModule}
 import zhujiang.device.bridge.axilite.AxiLiteBridge
 import zhujiang.device.dma.Axi2Chi
-import zhujiang.ZJModule
+import zhujiang.{ZJModule, ZJRawModule}
 import zhujiang.device.cluster.interconnect.DftWires
 
 class ShiftSync[T <: Data](gen:T, sync:Int = 3) extends Module {
@@ -33,7 +33,13 @@ object ShiftSync {
   }
 }
 
-class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extends ZJModule {
+class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extends ZJRawModule
+  with ImplicitClock with ImplicitReset {
+  val dft = IO(Input(new DftWires))
+  val clock = IO(Input(Clock()))
+  val implicitClock = clock
+  val implicitReset = Wire(AsyncReset())
+
   private val coreNum = zjParams.localRing.filter(_.nodeType == NodeType.CC).map(_.cpuNum).sum
   private val extIntrNum = zjParams.externalInterruptNum
   private val cfgAsyncModule = Module(new DeviceSideAsyncModule(cfgNode))
@@ -41,17 +47,19 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
   private val cfgBridge = Module(new AxiLiteBridge(cfgNode, 64, 3))
   private val dmaBridge = Module(new Axi2Chi(dmaNode))
   private val resetGen = Module(new ResetGen)
-  val dft = IO(Input(new DftWires))
   resetGen.clock := clock
   resetGen.reset := cfgAsyncModule.io.async.resetRx
   resetGen.dft := dft.reset
+  implicitReset := resetGen.o_reset
 
   private val cfgParams = cfgBridge.axi.params
   private val dmaParams = dmaBridge.axi.params
   private val extDmaParams = dmaParams.copy(idBits = dmaParams.idBits - 1)
 
   private val cfgXBar = Module(new AxiCfgXBar(cfgParams))
+  private val cfgBuf = Module(new AxiBuffer(cfgXBar.io.downstream.last.params))
   private val dmaXBar = Module(new AxiDmaXBar(Seq(extDmaParams, extDmaParams)))
+  private val dmaBuf = Module(new AxiBuffer(dmaXBar.io.upstream.last.params))
   private val axi2tl = Module(new AxiLite2TLUL(cfgXBar.io.downstream.head.params))
   private val tl2axi = Module(new TLUL2AxiLite(dmaXBar.io.upstream.head.params))
 
@@ -65,16 +73,6 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
     case MonitorsEnabled => false
   }))
   private val pb = Module(tlDevBlock.module)
-
-  cfgAsyncModule.reset := resetGen.o_reset
-  dmaAsyncModule.reset := resetGen.o_reset
-  cfgBridge.reset := resetGen.o_reset
-  dmaBridge.reset := resetGen.o_reset
-  cfgXBar.reset := resetGen.o_reset
-  dmaXBar.reset := resetGen.o_reset
-  axi2tl.reset := resetGen.o_reset
-  tl2axi.reset := resetGen.o_reset
-  pb.reset := resetGen.o_reset
 
   val io = IO(new Bundle {
     val async = new Bundle {
@@ -106,10 +104,12 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
   cfgBridge.icn <> cfgAsyncModule.io.icn
   cfgXBar.io.upstream.head <> cfgBridge.axi
   axi2tl.io.axi <> cfgXBar.io.downstream.head
-  io.ext.cfg <> cfgXBar.io.downstream.last
+  cfgBuf.io.in <> cfgXBar.io.downstream.last
+  io.ext.cfg <> cfgBuf.io.out
 
   dmaXBar.io.upstream.head <> tl2axi.io.axi
-  dmaXBar.io.upstream.last <> io.ext.dma
+  dmaXBar.io.upstream.last <> dmaBuf.io.out
+  dmaBuf.io.in <> io.ext.dma
   dmaBridge.axi <> dmaXBar.io.downstream.head
   dmaAsyncModule.io.icn <> dmaBridge.icn
   io.async.dma <> dmaAsyncModule.io.async
